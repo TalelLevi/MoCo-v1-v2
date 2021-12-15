@@ -32,7 +32,7 @@ class MoCo_v2(nn.Module):
                  momentum: float=0.999,
                  temperature: float=0.07,
                  bias: bool=True,
-                 moco: bool=False,
+                 pretraining: bool=False,
                  clf_hyperparams: dict=dict(),
                  seed: int=42,
                  mlp: bool=True,  # MoCo v2 improvement
@@ -48,7 +48,7 @@ class MoCo_v2(nn.Module):
         self.momentum = momentum  # m
         self.temperature = temperature  # t
         self.bias = bias
-        self.moco = moco
+        self.pretraining = pretraining
         self.clf_hyperparams = clf_hyperparams
         self.seed = seed
         if self.seed is not None: 
@@ -91,7 +91,7 @@ class MoCo_v2(nn.Module):
 
     def end_moco_phase(self):
         """ transition model to classification phase """
-        self.moco = False
+        self.pretraining = False
 
         # delete non-necessary modules and freeze all weights
         del self.k_encoder
@@ -138,7 +138,7 @@ class MoCo_v2(nn.Module):
         self.queue.requires_grad = False
 
     def forward(self, *args, prints=False):
-        if self.moco:
+        if self.pretraining:
             return self.moco_forward(*args, prints=prints)
         else:
             return self.clf_forward(*args, prints=prints)

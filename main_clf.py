@@ -14,7 +14,7 @@ import torchvision
 
 from tqdm import tqdm
 
-from src import arch
+from src import MoCo
 from src import utils
 from config import cfg
 from src import pytorch_utils as ptu
@@ -50,7 +50,7 @@ if device.type == 'cuda':
 # In[4]:
 
 
-print(cfg.moco.version)
+print(cfg.pretraining.version)
 
 
 # In[5]:
@@ -69,7 +69,7 @@ if cfg.clf.load is not None and os.path.exists(os.path.join(cfg.models_dir, cfg.
     elif cfg.prints == 'print':
         print(checkpoint.log.sort_index(ascending=False).head(20))
 else:
-    moco_checkpoint = ptu.load_model(version=cfg.moco.version, models_dir=cfg.models_dir, epoch=cfg.clf.moco_epoch)
+    moco_checkpoint = ptu.load_model(version=cfg.pretraining.version, models_dir=cfg.models_dir, epoch=cfg.clf.moco_epoch)
     model = moco_checkpoint.model
     model.end_moco_phase()
     if cfg.prints == 'display':

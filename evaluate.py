@@ -14,7 +14,7 @@ import torchvision
 
 from tqdm import tqdm
 
-from src import arch
+from src import MoCo
 from src import utils
 from config import cfg
 from src import pytorch_utils as ptu
