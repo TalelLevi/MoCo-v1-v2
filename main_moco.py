@@ -14,6 +14,9 @@ import time
 import warnings
 warnings.filterwarnings("ignore")
 from src.utils import *
+from train import Trainer
+
+
 #
 # if cfg.pretraining.load is not None and os.path.exists(os.path.join(cfg.models_dir, cfg.pretraining.version, ptu.naming_scheme(cfg.pretraining.version, epoch=cfg.pretraining.load)) + '.pth'):
 #     checkpoint = ptu.load_model(version=cfg.pretraining.version, models_dir=cfg.models_dir, epoch=cfg.pretraining.load)
@@ -208,7 +211,8 @@ def main(args):
                                 weight_decay=args.wd)
 
 
-    train.train(model,criterion,optimizer)
+    Trainer(model, criterion, optimizer, device)
+
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ import torch
 from typing import Any, Callable
 from torch.utils.data import DataLoader
 
-# from cs236781.train_results import FitResult, BatchResult, EpochResult
+from train_result import FitResult, BatchResult, EpochResult
 
 
 class Trainer(abc.ABC):
