@@ -1,4 +1,4 @@
-name: hw1
+name: advance_deep
 channels:
   - pytorch
   - defaults

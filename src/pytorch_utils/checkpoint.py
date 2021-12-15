@@ -94,16 +94,16 @@ class Checkpoint:
 
         Examples
         --------
-        >>> model = nn.Sequential(nn.Linear(10, 1), nn.Sigmoid())
-        >>> checkpoint = Checkpoint(version=1.0.0,
-        >>>                         model=model,
-        >>>                         optimizer=torch.optim.Adam([p for p in self.model.parameters() if p.requires_grad], lr=4e-4),
-        >>>                         criterion=nn.BCELoss(),
-        >>>                         score=sklearn.metrics.roc_auc_score,
-        >>>                         models_dir='models',
-        >>>                         seed=42,
-        >>>                         naming_scheme=naming_scheme,
-        >>>                         save=False)
+        model = nn.Sequential(nn.Linear(10, 1), nn.Sigmoid())
+        checkpoint = Checkpoint(version=1.0.0,
+                                model=model,
+                                optimizer=torch.optim.Adam([p for p in self.model.parameters() if p.requires_grad], lr=4e-4),
+                                criterion=nn.BCELoss(),
+                                score=sklearn.metrics.roc_auc_score,
+                                models_dir='models',
+                                seed=42,
+                                naming_scheme=naming_scheme,
+                                save=False)
         """
         self.version = version
         self.seed = seed

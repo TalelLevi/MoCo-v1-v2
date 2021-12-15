@@ -2,7 +2,7 @@
 
 # Setup env
 source $HOME/miniconda3/etc/profile.d/conda.sh
-conda activate hw1
+conda activate deep
 echo "start moco job"
 nvidia-smi
 python main_moco.py
