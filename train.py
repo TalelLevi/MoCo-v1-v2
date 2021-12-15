@@ -260,7 +260,7 @@ class TorchTrainer(Trainer):
     def train_batch(self, batch) -> BatchResult:
         X, y = batch
         if self.device:
-            X = X.to(self.device)
+            X = [X[0].to(self.device),X[1].to(self.device)]
             y = y.to(self.device)
 
         # TODO: Train the PyTorch model on one batch of data.
@@ -271,7 +271,7 @@ class TorchTrainer(Trainer):
         # ====== YOUR CODE: ======
         self.model.train()
         # forward pass
-        y_hat = self.model(X)           # same as calling model.forward()
+        y_hat = self.model(*X)           # same as calling model.forward()
         loss = self.loss_fn(y_hat, y)   # same as calling loss_fn.forward()
 
         # backward pass

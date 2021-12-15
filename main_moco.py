@@ -14,7 +14,7 @@ import time
 import warnings
 warnings.filterwarnings("ignore")
 from src.utils import *
-from train import Trainer
+from train import TorchTrainer as Trainer
 
 
 #
@@ -211,8 +211,8 @@ def main(args):
                                 weight_decay=args.wd)
 
 
-    Trainer(model, criterion, optimizer, device)
-
+    trainer = Trainer(model, criterion, optimizer, device)
+    trainer.fit(train_loader,train_eval_loader,args.epochs)
 
 
 if __name__ == '__main__':
