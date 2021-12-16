@@ -98,8 +98,8 @@ def main(args):
 
     train_dataset = utils.Dataset(os.path.join(args.data_path, 'train'), moco_v2_transforms,
                                   preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
-    train_eval_dataset = utils.Dataset(os.path.join(args.data_path, 'train'), TwoCropsTransform(clf_train_transforms),
-                                       preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
+    # train_eval_dataset = utils.Dataset(os.path.join(args.data_path, 'train'), TwoCropsTransform(clf_train_transforms),
+    #                                    preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
     val_dataset = utils.Dataset(os.path.join(args.data_path, 'val'), TwoCropsTransform(clf_val_transforms),
                                 preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
 
@@ -109,7 +109,7 @@ def main(args):
                                                drop_last=True, shuffle=True, pin_memory=True)
 
     # ToDo: consider to remove it
-    train_eval_loader = torch.utils.data.DataLoader(train_eval_dataset,
+    val_loader = torch.utils.data.DataLoader(val_dataset,
                                                     batch_size=args.bs,
                                                     num_workers=args.num_workers,
                                                     drop_last=True, shuffle=True, pin_memory=True)
@@ -128,12 +128,13 @@ def main(args):
                                 weight_decay=args.wd)
 
     if not args.load:
-        shutil.rmtree(f'./experiments/{exp_name}')
+        if os.path.exists(f'./experiments/{exp_name}_moco'):
+            shutil.rmtree(f'./experiments/{exp_name}_moco')
 
-        Path(f'./experiments/{exp_name}/checkpoints').mkdir(parents=True, exist_ok=True)
+        Path(f'./experiments/{exp_name}_moco/checkpoints').mkdir(parents=True, exist_ok=True)
 
     trainer = Trainer(model, criterion, optimizer, device)
-    trainer.fit(train_loader,train_eval_loader,args.epochs,checkpoint_path=f'./experiments/{exp_name}_moco/checkpoints/')
+    trainer.fit(train_loader,val_loader,args.epochs,checkpoint_path=f'./experiments/{exp_name}_moco/checkpoints/model.pth')
 
 
 if __name__ == '__main__':

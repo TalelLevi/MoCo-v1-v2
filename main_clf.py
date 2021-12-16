@@ -19,64 +19,6 @@ from src.utils import *
 from train import TorchTrainer as Trainer
 import shutil
 
-
-checkpoint.train(train_loader=train_loader,
-                 val_loader=val_loader,
-                 train_epochs=int(max(0, cfg.clf.epochs - checkpoint.get_log())),
-                 optimizer_params=cfg.clf.optimizer_params,
-                 prints=cfg.prints,
-                 epochs_save=cfg.epochs_save,
-                 epochs_evaluate_train=cfg.epochs_evaluate_train,
-                 epochs_evaluate_validation=cfg.epochs_evaluate_validation,
-                 device=device,
-                 tqdm_bar=cfg.tqdm_bar,
-                 save=cfg.save,
-                 save_log=cfg.save_log,
-                )
-
-
-# In[ ]:
-
-
-# import torchviz
-# train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=32, num_workers=0, drop_last=True, shuffle=True, pin_memory=True)
-# for batch in train_loader:
-#     img, labels = batch
-#     img = img.to(device)
-#     labels = labels.to(device)
-#     model = model.to(device)
-#     out = model(img, prints=True)
-#     print('img',  img.shape)
-#     print('labels', labels.shape)
-#     print('out', out.shape)
-#     loss = nn.functional.cross_entropy(out.float(), labels.long())
-#     print('loss',  loss)
-#     break
-# torchviz.make_dot(out, params=dict(model.named_parameters()))
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
-
-
-# In[ ]:
-
-
-
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--seed', default=None, type=int)
@@ -94,7 +36,7 @@ def get_args_parser():
 
     # * MoCo
     parser.add_argument('--load', default=False, type=bool)
-    parser.add_argument('--load_path', default='./experiments/temp/checkpoints/', type=str)
+    parser.add_argument('--load_path', default='./experiments/temp_moco/checkpoints/', type=str)
     parser.add_argument('--wd', default=1e-4, type=float)
     parser.add_argument('--backbone', default='resnext50_32x4d', type=str)
     parser.add_argument('--bs', default=32, type=int)
@@ -115,7 +57,7 @@ def get_args_parser():
     parser.add_argument('--clf_load', default=-1, type=int)
     parser.add_argument('--clf_moco_epoch', default='best', type=str)
     parser.add_argument('--clf_epochs', default=200, type=int)
-    parser.add_argument('--clf_wd ', default= 0.0, type=float)
+    parser.add_argument('--clf_wd', default=0., type=float)
     parser.add_argument('--clf_lr', default=3e-2, type=float)
     parser.add_argument('--clf_cos', default=True, type=bool)
     parser.add_argument('--clf_best_policy', default= 'val_score', type=str)
@@ -141,7 +83,7 @@ def main(args):
         # exp_name = create_name(args)
         exp_name='temp'
 
-    model = torch.load(args.load_path, map_location='cpu')
+    model = torch.load(os.path.join(args.load_path,'model.pth'), map_location='cpu')
     model.pretraining = False
 
     if len(os.environ["CUDA_VISIBLE_DEVICES"])>1:
@@ -183,9 +125,10 @@ def main(args):
                                 weight_decay=args.clf_wd)
 
     if not args.load:
-        shutil.rmtree(f'./experiments/{exp_name}')
+        if os.path.exists(f'./experiments/{exp_name}_clf'):
+            shutil.rmtree(f'./experiments/{exp_name}_clf')
 
-        Path(f'./experiments/{exp_name}/checkpoints').mkdir(parents=True, exist_ok=True)
+        Path(f'./experiments/{exp_name}_clf/checkpoints').mkdir(parents=True, exist_ok=True)
 
     trainer = Trainer(model, criterion, optimizer, device)
     trainer.fit(train_loader,val_loader,args.epochs,checkpoint_path=f'./experiments/{exp_name}_clf/checkpoints/')

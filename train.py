@@ -102,7 +102,7 @@ class Trainer(abc.ABC):
                 epochs_without_improvement += 1
 
             if checkpoint_path is not None:
-                torch.save(self.model.state_dict(), checkpoint_path)
+                torch.save(self.model, checkpoint_path)
 
             if early_stopping and epochs_without_improvement >= early_stopping:
                 break
@@ -283,7 +283,7 @@ class TorchTrainer(Trainer):
             loss = self.loss_fn(logits.float(), zeros.long())   # same as calling loss_fn.forward()
         else:
             out = self.model(X)
-            loss = self.criterion(out.float(), y.long())
+            loss = self.loss_fn(out.float(), y.long())
 
         # backward pass
         self.optimizer.zero_grad()
