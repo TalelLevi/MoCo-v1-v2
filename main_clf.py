@@ -1,132 +1,23 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 import os
-import random
-import numpy as np
+
+import argparse
+from pathlib import Path
 
 import torch
 import torch.nn as nn
-import torchvision
-
-from tqdm import tqdm
-
-from src import MoCo
 from src import utils
-from config import cfg
-from src import pytorch_utils as ptu
+import shutil
 
+
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6,7"
+os.environ["CUDA_VISIBLE_DEVICES"] = "4"
+from src.MoCo import MoCo_v2
+import time
 import warnings
 warnings.filterwarnings("ignore")
-
-# assert torch.cuda.is_available(), "no CUDA"
-
-
-# In[2]:
-
-
-print(cfg())
-
-
-# In[3]:
-
-
-if cfg.seed is not None:
-    random.seed(cfg.seed)
-    torch.random.manual_seed(cfg.seed)
-    torch.manual_seed(cfg.seed)
-    torch.backends.cudnn.deterministic = True
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
-if device.type == 'cuda':
-    torch.backends.cudnn.benchmark = True
-    print(torch.cuda.get_device_properties(device))
-
-
-# In[4]:
-
-
-print(cfg.pretraining.version)
-
-
-# In[5]:
-
-
-print(cfg.clf.version)
-
-
-# In[6]:
-
-
-if cfg.clf.load is not None and os.path.exists(os.path.join(cfg.models_dir, cfg.clf.version, ptu.naming_scheme(cfg.clf.version, epoch=cfg.clf.load)) + '.pth'):
-    checkpoint = ptu.load_model(version=cfg.clf.version, models_dir=cfg.models_dir, epoch=cfg.clf.load)
-    if cfg.prints == 'display':
-        display(checkpoint.log.sort_index(ascending=False).head(20))
-    elif cfg.prints == 'print':
-        print(checkpoint.log.sort_index(ascending=False).head(20))
-else:
-    moco_checkpoint = ptu.load_model(version=cfg.pretraining.version, models_dir=cfg.models_dir, epoch=cfg.clf.moco_epoch)
-    model = moco_checkpoint.model
-    model.end_moco_phase()
-    if cfg.prints == 'display':
-        display(moco_checkpoint.log.sort_index(ascending=False).head(5))
-    elif cfg.prints == 'print':
-        print(moco_checkpoint.log.sort_index(ascending=False).head(5))
-
-    optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
-                                lr=cfg.clf.lr,
-                                momentum=cfg.clf.optimizer_momentum,
-                                weight_decay=cfg.clf.wd)
-
-    lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
-                                                              T_max=cfg.clf.epochs,
-                                                              eta_min=cfg.clf.min_lr) if cfg.clf.cos else None
-
-    checkpoint = utils.MyCheckpoint(version=cfg.clf.version,
-                                    model=model,
-                                    optimizer=optimizer,
-                                    criterion=nn.CrossEntropyLoss().to(device),
-                                    score=utils.accuracy_score,
-                                    lr_scheduler=lr_scheduler,
-                                    models_dir=cfg.models_dir,
-                                    seed=cfg.seed,
-                                    best_policy=cfg.clf.best_policy,
-                                    save=cfg.save,
-                                   )
-
-    checkpoint.moco_log = moco_checkpoint.log
-    checkpoint.moco_train_batch_log = moco_checkpoint.train_loss_log
-
-    if cfg.save:
-        with open(os.path.join(checkpoint.version_dir, 'config.txt'), 'w') as f:
-            f.writelines(str(cfg))
-
-ptu.params(checkpoint.model)
-ptu.params(checkpoint.model.q_encoder.fc)
-
-
-# In[8]:
-
-
-train_dataset = utils.Dataset(os.path.join(cfg.data_path, 'train'), cfg.clf.train_transforms, preload_data=cfg.preload_data, tqdm_bar=cfg.tqdm_bar)
-val_dataset = utils.Dataset(os.path.join(cfg.data_path, 'val'), cfg.clf.val_transforms, preload_data=cfg.preload_data, tqdm_bar=cfg.tqdm_bar)
-
-train_loader = torch.utils.data.DataLoader(train_dataset,
-                                           batch_size=checkpoint.model.batch_size,
-                                           num_workers=cfg.num_workers,
-                                           drop_last=True, shuffle=True, pin_memory=True)
-
-val_loader = torch.utils.data.DataLoader(val_dataset,
-                                         batch_size=checkpoint.model.batch_size,
-                                         num_workers=cfg.num_workers,
-                                         drop_last=True, shuffle=False, pin_memory=True)
-
-
-# In[ ]:
+from src.utils import *
+from train import TorchTrainer as Trainer
+import shutil
 
 
 checkpoint.train(train_loader=train_loader,
@@ -183,6 +74,128 @@ checkpoint.train(train_loader=train_loader,
 
 
 # In[ ]:
+
+
+
+def get_args_parser():
+    parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
+    parser.add_argument('--seed', default=None, type=int)
+    parser.add_argument('--data_path', default=os.path.join('data', 'imagenette2'), type=str)
+    parser.add_argument('--models_dir', default='models', type=str)
+    parser.add_argument('--save', default=True, type=bool)
+    parser.add_argument('--save_log', default=True, type=bool)
+    parser.add_argument('--epochs_evaluate_train', default=1, type=int)
+    parser.add_argument('--epochs_evaluate_validation', default=1, type=int)
+    parser.add_argument('--num_workers', default=2, type=int)
+    parser.add_argument('--epochs_save', default=None, type=int)
+    parser.add_argument('--tqdm_bar', default=True, type=bool)
+    parser.add_argument('--preload_data', default=True, type=bool)
+    parser.add_argument('--prints', default='print', type=str)
+
+    # * MoCo
+    parser.add_argument('--load', default=False, type=bool)
+    parser.add_argument('--load_path', default='./experiments/temp/checkpoints/', type=str)
+    parser.add_argument('--wd', default=1e-4, type=float)
+    parser.add_argument('--backbone', default='resnext50_32x4d', type=str)
+    parser.add_argument('--bs', default=32, type=int)
+    parser.add_argument('--temperature', default=0.2, type=float)
+    parser.add_argument('--queue_size', default=16384, type=int)
+    parser.add_argument('--epochs', default=600, type=int)
+    parser.add_argument('--optimizer_momentum', default=0.9, type=float)
+    parser.add_argument('--lr', default=3e-2, type=float)
+    parser.add_argument('--min_lr', default=5e-7, type=float)
+    parser.add_argument('--cos', default=True, type=bool)
+    parser.add_argument('--best_policy', default='val_score', type=str)
+    parser.add_argument('--model_momentum', default=0.999, type=float)
+    parser.add_argument('--dim', default=128, type=int)
+    parser.add_argument('--mlp', default=True, type=bool)
+    parser.add_argument('--bias', default=True, type=bool)
+
+    # clf params
+    parser.add_argument('--clf_load', default=-1, type=int)
+    parser.add_argument('--clf_moco_epoch', default='best', type=str)
+    parser.add_argument('--clf_epochs', default=200, type=int)
+    parser.add_argument('--clf_wd ', default= 0.0, type=float)
+    parser.add_argument('--clf_lr', default=3e-2, type=float)
+    parser.add_argument('--clf_cos', default=True, type=bool)
+    parser.add_argument('--clf_best_policy', default= 'val_score', type=str)
+    parser.add_argument('--clf_bs ', default= 32, type=int)
+    parser.add_argument('--clf_optimizer_momentum', default=0.9, type=float)
+    parser.add_argument('--clf_min_lr', default=5e-7, type=float)
+
+    return parser
+
+
+def main(args):
+    if args.seed is not None:
+        random.seed(args.seed)
+        torch.random.manual_seed(args.seed)
+        torch.manual_seed(args.seed)
+        torch.backends.cudnn.deterministic = True
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    if args.load:
+        pass
+    else:
+        # exp_name = create_name(args)
+        exp_name='temp'
+
+    model = torch.load(args.load_path, map_location='cpu')
+    model.pretraining = False
+
+    if len(os.environ["CUDA_VISIBLE_DEVICES"])>1:
+        model = nn.DataParallel(model)
+    model = model.to(device)
+
+    train_dataset = utils.Dataset(os.path.join(args.data_path, 'train'), utils.clf_train_transforms,
+                                  preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
+    # train_eval_dataset = utils.Dataset(os.path.join(args.data_path, 'train'), TwoCropsTransform(clf_train_transforms),
+    #                                    preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
+    val_dataset = utils.Dataset(os.path.join(args.data_path, 'val'), utils.clf_val_transforms,
+                                preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
+
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=args.bs,
+                                               num_workers=args.num_workers,
+                                               drop_last=True, shuffle=True, pin_memory=True)
+
+    # train_eval_loader = torch.utils.data.DataLoader(train_eval_dataset,
+    #                                                 batch_size=args.bs,
+    #                                                 num_workers=args.num_workers,
+    #                                                 drop_last=True, shuffle=True, pin_memory=True)
+
+    val_loader = torch.utils.data.DataLoader(val_dataset,
+                                             batch_size=args.bs,
+                                             num_workers=args.num_workers,
+                                             drop_last=True, shuffle=False, pin_memory=True)
+
+    # ToDo : consider to remove it
+    # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+    #                                                           T_max=args.epochs,
+    #                                                           eta_min=args.min_lr) if args.cos else None
+
+    criterion = nn.CrossEntropyLoss()
+
+    optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
+                                lr=args.clf_lr,
+                                momentum=args.clf_optimizer_momentum,
+                                weight_decay=args.clf_wd)
+
+    if not args.load:
+        shutil.rmtree(f'./experiments/{exp_name}')
+
+        Path(f'./experiments/{exp_name}/checkpoints').mkdir(parents=True, exist_ok=True)
+
+    trainer = Trainer(model, criterion, optimizer, device)
+    trainer.fit(train_loader,val_loader,args.epochs,checkpoint_path=f'./experiments/{exp_name}_clf/checkpoints/')
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser('MoCo training and evaluation script', parents=[get_args_parser()])
+    args = parser.parse_args()
+    main(args)
+
 
 
 

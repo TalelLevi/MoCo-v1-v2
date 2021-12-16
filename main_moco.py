@@ -1,12 +1,13 @@
 import os
-import random
+
 import argparse
 from pathlib import Path
-import torch
+
 import torch.nn as nn
 from src import utils
-from config import cfg
-from src import pytorch_utils as ptu
+import shutil
+
+
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6,7"
 os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 from src.MoCo import MoCo_v2
@@ -15,88 +16,7 @@ import warnings
 warnings.filterwarnings("ignore")
 from src.utils import *
 from train import TorchTrainer as Trainer
-
-
-#
-# if cfg.pretraining.load is not None and os.path.exists(os.path.join(cfg.models_dir, cfg.pretraining.version, ptu.naming_scheme(cfg.pretraining.version, epoch=cfg.pretraining.load)) + '.pth'):
-#     checkpoint = ptu.load_model(version=cfg.pretraining.version, models_dir=cfg.models_dir, epoch=cfg.pretraining.load)
-#     if cfg.prints == 'display':
-#         display(checkpoint.log.sort_index(ascending=False).head(20))
-#     elif cfg.prints == 'print':
-#         print(checkpoint.log.sort_index(ascending=False).head(20))
-# else:
-#     model = arch.MoCo_v2(backbone=cfg.pretraining.backbone,
-#                          dim=cfg.pretraining.dim,
-#                          queue_size=cfg.pretraining.queue_size,
-#                          batch_size=cfg.pretraining.bs,
-#                          momentum=cfg.pretraining.model_momentum,
-#                          temperature=cfg.pretraining.temperature,
-#                          bias=cfg.pretraining.bias,
-#                          moco=True,
-#                          clf_hyperparams=cfg.pretraining.clf_kwargs,
-#                          seed=cfg.seed,
-#                          mlp=cfg.pretraining.mlp,
-#                          )
-#
-#     checkpoint = utils.MyCheckpoint(version=cfg.pretraining.version,
-#                                     model=model,
-#                                     optimizer=optimizer,
-#                                     criterion=nn.CrossEntropyLoss().to(device),
-#                                     score=utils.accuracy_score,
-#                                     lr_scheduler=lr_scheduler,
-#                                     models_dir=cfg.models_dir,
-#                                     seed=cfg.seed,
-#                                     best_policy=cfg.pretraining.best_policy,
-#                                     save=cfg.save,
-#                                     )
-#     if cfg.save:
-#         with open(os.path.join(checkpoint.version_dir, 'config.txt'), 'w') as f:
-#             f.writelines(str(cfg))
-#
-# ptu.params(checkpoint.model)
-#
-#
-# # In[7]:
-#
-#
-# train_dataset = utils.Dataset(os.path.join(cfg.data_path, 'train'), cfg.pretraining.train_transforms, preload_data=cfg.preload_data, tqdm_bar=cfg.tqdm_bar)
-# train_eval_dataset = utils.Dataset(os.path.join(cfg.data_path, 'train'), cfg.pretraining.train_eval_transforms, preload_data=cfg.preload_data, tqdm_bar=cfg.tqdm_bar)
-# val_dataset = utils.Dataset(os.path.join(cfg.data_path, 'val'), cfg.pretraining.val_eval_transforms, preload_data=cfg.preload_data, tqdm_bar=cfg.tqdm_bar)
-#
-# train_loader = torch.utils.data.DataLoader(train_dataset,
-#                                            batch_size=checkpoint.model.batch_size,
-#                                            num_workers=cfg.num_workers,
-#                                            drop_last=True, shuffle=True, pin_memory=True)
-#
-# train_eval_loader = torch.utils.data.DataLoader(train_eval_dataset,
-#                                                 batch_size=checkpoint.model.batch_size,
-#                                                 num_workers=cfg.num_workers,
-#                                                 drop_last=True, shuffle=True, pin_memory=True)
-#
-# val_loader = torch.utils.data.DataLoader(val_dataset,
-#                                          batch_size=checkpoint.model.batch_size,
-#                                          num_workers=cfg.num_workers,
-#                                          drop_last=True, shuffle=False, pin_memory=True)
-#
-#
-# # In[ ]:
-#
-#
-# checkpoint.train(train_loader=train_loader,
-#                  train_eval_loader=train_eval_loader,
-#                  val_loader=val_loader,
-#                  train_epochs=int(max(0, cfg.pretraining.epochs - checkpoint.get_log())),
-#                  optimizer_params=cfg.pretraining.optimizer_params,
-#                  prints=cfg.prints,
-#                  epochs_save=cfg.epochs_save,
-#                  epochs_evaluate_train=cfg.epochs_evaluate_train,
-#                  epochs_evaluate_validation=cfg.epochs_evaluate_validation,
-#                  device=device,
-#                  tqdm_bar=cfg.tqdm_bar,
-#                  save=cfg.save,
-#                  save_log=cfg.save_log,
-#                  )
-
+import shutil
 
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
@@ -114,7 +34,7 @@ def get_args_parser():
     parser.add_argument('--prints', default='print', type=str)
 
     # * MoCo
-    parser.add_argument('--load', default=-1, type=int)
+    parser.add_argument('--load', default=False, type=bool)
     parser.add_argument('--wd', default=1e-4, type=float)
     parser.add_argument('--backbone', default='resnext50_32x4d', type=str)
     parser.add_argument('--bs', default=32, type=int)
@@ -188,15 +108,12 @@ def main(args):
                                                num_workers=args.num_workers,
                                                drop_last=True, shuffle=True, pin_memory=True)
 
+    # ToDo: consider to remove it
     train_eval_loader = torch.utils.data.DataLoader(train_eval_dataset,
                                                     batch_size=args.bs,
                                                     num_workers=args.num_workers,
                                                     drop_last=True, shuffle=True, pin_memory=True)
 
-    val_loader = torch.utils.data.DataLoader(val_dataset,
-                                             batch_size=args.bs,
-                                             num_workers=args.num_workers,
-                                             drop_last=True, shuffle=False, pin_memory=True)
 
     # ToDo : consider to remove it
     # lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
@@ -210,16 +127,18 @@ def main(args):
                                 momentum=args.optimizer_momentum,
                                 weight_decay=args.wd)
 
+    if not args.load:
+        shutil.rmtree(f'./experiments/{exp_name}')
+
+        Path(f'./experiments/{exp_name}/checkpoints').mkdir(parents=True, exist_ok=True)
 
     trainer = Trainer(model, criterion, optimizer, device)
-    trainer.fit(train_loader,train_eval_loader,args.epochs)
+    trainer.fit(train_loader,train_eval_loader,args.epochs,checkpoint_path=f'./experiments/{exp_name}_moco/checkpoints/')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('MoCo training and evaluation script', parents=[get_args_parser()])
     args = parser.parse_args()
-    # if args.output_dir:
-    #     Path(args.output_dir).mkdir(parents=True, exist_ok=True)
     main(args)
 
 

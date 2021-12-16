@@ -40,7 +40,7 @@ class Trainer(abc.ABC):
         dl_train: DataLoader,
         dl_test: DataLoader,
         num_epochs,
-        checkpoints: str = None,
+        checkpoint_path: str = None,
         early_stopping: int = None,
         print_every=1,
         **kw,
@@ -85,10 +85,14 @@ class Trainer(abc.ABC):
             train_loss.extend(res.losses)
             train_acc.append(res.accuracy)
 
-            res = self.test_epoch(dl_test, **kw)
-            # test_loss.append(sum(res.losses)/len(res.losses))
-            test_loss.extend(res.losses)
-            test_acc.append(res.accuracy)
+            if not self.model.pretraining:
+                res = self.test_epoch(dl_test, **kw)
+                # test_loss.append(sum(res.losses)/len(res.losses))
+                test_loss.extend(res.losses)
+                test_acc.append(res.accuracy)
+            else:
+                test_loss.extend(res.losses)
+                test_acc.append(res.accuracy)
             actual_num_epochs += 1
 
             if res.accuracy > best_acc:
@@ -97,8 +101,8 @@ class Trainer(abc.ABC):
             else:
                 epochs_without_improvement += 1
 
-            if checkpoints is not None:
-                torch.save(self.model.state_dict(), checkpoints)
+            if checkpoint_path is not None:
+                torch.save(self.model.state_dict(), checkpoint_path)
 
             if early_stopping and epochs_without_improvement >= early_stopping:
                 break
@@ -260,7 +264,10 @@ class TorchTrainer(Trainer):
     def train_batch(self, batch) -> BatchResult:
         X, y = batch
         if self.device:
-            X = [X[0].to(self.device),X[1].to(self.device)]
+            if self.model.pretraining:
+                X = [X[0].to(self.device),X[1].to(self.device)]
+            else:
+                X = X.to(self.device)
             y = y.to(self.device)
 
         # TODO: Train the PyTorch model on one batch of data.
@@ -271,8 +278,12 @@ class TorchTrainer(Trainer):
         # ====== YOUR CODE: ======
         self.model.train()
         # forward pass
-        y_hat = self.model(*X)           # same as calling model.forward()
-        loss = self.loss_fn(y_hat, y)   # same as calling loss_fn.forward()
+        if self.model.pretraining:
+            q, logits, zeros = self.model(*X)
+            loss = self.loss_fn(logits.float(), zeros.long())   # same as calling loss_fn.forward()
+        else:
+            out = self.model(X)
+            loss = self.criterion(out.float(), y.long())
 
         # backward pass
         self.optimizer.zero_grad()
@@ -281,12 +292,12 @@ class TorchTrainer(Trainer):
         # weight update
         self.optimizer.step()
 
+        if not self.model.pretraining:
         # calc accuracy
-        num_correct = torch.sum(torch.argmax(y_hat, axis=1) == y).float().item()
+            num_correct = torch.sum(torch.argmax(out, axis=1) == y).float().item()
+            return BatchResult(loss, num_correct)
         loss = loss.item()
-        # ========================
-
-        return BatchResult(loss, num_correct)
+        return BatchResult(loss, 0)
 
     def test_batch(self, batch) -> BatchResult:
         X, y = batch
