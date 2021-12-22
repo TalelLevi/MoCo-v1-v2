@@ -36,14 +36,14 @@ class Trainer(abc.ABC):
             model.to(self.device)
 
     def fit(
-        self,
-        dl_train: DataLoader,
-        dl_test: DataLoader,
-        num_epochs,
-        checkpoint_path: str = None,
-        early_stopping: int = None,
-        print_every=1,
-        **kw,
+            self,
+            dl_train: DataLoader,
+            dl_test: DataLoader,
+            num_epochs,
+            checkpoint_path: str = None,
+            early_stopping: int = None,
+            print_every=1,
+            **kw,
     ) -> FitResult:
         """
         Trains the model for multiple epochs with a given training set,
@@ -51,7 +51,7 @@ class Trainer(abc.ABC):
         :param dl_train: Dataloader for the training set.
         :param dl_test: Dataloader for the test set.
         :param num_epochs: Number of epochs to train for.
-        :param checkpoints: Whether to save model to file every time the
+        :param checkpoint_path: Whether to save model to file every time the
             test set accuracy improves. Should be a string containing a
             filename without extension.
         :param early_stopping: Whether to stop training early if there is no
@@ -69,9 +69,9 @@ class Trainer(abc.ABC):
             verbose = False  # pass this to train/test_epoch.
             if epoch % print_every == 0 or epoch == num_epochs - 1:
                 verbose = True
-            self._print(f"--- EPOCH {epoch+1}/{num_epochs} ---", verbose)
+            self._print(f"--- EPOCH {epoch + 1}/{num_epochs} ---", verbose)
 
-            # TODO: Train & evaluate for one epoch
+            # Train & evaluate for one epoch
             #  - Use the train/test_epoch methods.
             #  - Save losses and accuracies in the lists above.
             #  - Implement early stopping. This is a very useful and
@@ -79,7 +79,7 @@ class Trainer(abc.ABC):
             #  - Optional: Implement checkpoints. You can use torch.save() to
             #    save the model to the file specified by the checkpoints
             #    argument.
-            # ====== YOUR CODE: ======
+            # =====================
             res = self.train_epoch(dl_train, **kw)
             # train_loss.append(sum(res.losses)/len(res.losses))
             train_loss.extend(res.losses)
@@ -162,10 +162,10 @@ class Trainer(abc.ABC):
 
     @staticmethod
     def _foreach_batch(
-        dl: DataLoader,
-        forward_fn: Callable[[Any], BatchResult],
-        verbose=True,
-        max_batches=None,
+            dl: DataLoader,
+            forward_fn: Callable[[Any], BatchResult],
+            verbose=True,
+            max_batches=None,
     ) -> EpochResult:
         """
         Evaluates the given forward-function on batches from the given
@@ -210,51 +210,7 @@ class Trainer(abc.ABC):
         return EpochResult(losses=losses, accuracy=accuracy)
 
 
-class BlocksTrainer(Trainer):
-    def __init__(self, model, loss_fn, optimizer):
-        super().__init__(model, loss_fn, optimizer)
-
-    def train_batch(self, batch) -> BatchResult:
-        X, y = batch
-
-        # TODO: Train the Block model on one batch of data.
-        #  - Forward pass
-        #  - Backward pass
-        #  - Optimize params
-        #  - Calculate number of correct predictions (make sure it's an int,
-        #    not a tensor) as num_correct.
-        # ====== YOUR CODE: ======
-        self.model.train()
-        # forward pass
-        y_hat = self.model.forward(X, y=y)
-        loss = self.loss_fn.forward(y_hat, y).item()
-
-        # backward pass
-        self.optimizer.zero_grad()
-        dloss = self.loss_fn.backward()
-        self.model.backward(dloss)
-
-        # weight update
-        self.optimizer.step()
-
-        # calc accuracy
-        num_correct = torch.sum(torch.argmax(y_hat, axis=1) == y).float().item()
-        # ========================
-
-        return BatchResult(loss, num_correct)
-
-    def test_batch(self, batch) -> BatchResult:
-        X, y = batch
-
-        # TODO: Evaluate the Block model on one batch of data.
-        # ====== YOUR CODE: ======
-        self.model.train(False)
-        y_hat = self.model.forward(X, y=y)
-        loss = self.loss_fn.forward(y_hat, y).item()
-        num_correct = torch.sum(torch.argmax(y_hat, axis=1) == y).float().item()
-        # ========================
-
-        return BatchResult(loss, num_correct)
+# ============== Inherit train Class ==============
 
 
 class TorchTrainer(Trainer):
@@ -265,22 +221,21 @@ class TorchTrainer(Trainer):
         X, y = batch
         if self.device:
             if self.model.pretraining:
-                X = [X[0].to(self.device),X[1].to(self.device)]
+                X = [X[0].to(self.device), X[1].to(self.device)]
             else:
                 X = X.to(self.device)
             y = y.to(self.device)
 
-        # TODO: Train the PyTorch model on one batch of data.
+        # Train the PyTorch model on one batch of data.
         #  - Forward pass
         #  - Backward pass
         #  - Optimize params
-        #  - Calculate number of correct predictions
-        # ====== YOUR CODE: ======
+        #  - Calculate accuracy
         self.model.train()
         # forward pass
         if self.model.pretraining:
             q, logits, zeros = self.model(*X)
-            loss = self.loss_fn(logits.float(), zeros.long())   # same as calling loss_fn.forward()
+            loss = self.loss_fn(logits.float(), zeros.long())  # same as calling loss_fn.forward()
         else:
             out = self.model(X)
             loss = self.loss_fn(out.float(), y.long())
@@ -293,7 +248,7 @@ class TorchTrainer(Trainer):
         self.optimizer.step()
 
         if not self.model.pretraining:
-        # calc accuracy
+            # calc accuracy
             num_correct = torch.sum(torch.argmax(out, axis=1) == y).float().item()
             return BatchResult(loss, num_correct)
         loss = loss.item()
@@ -306,14 +261,12 @@ class TorchTrainer(Trainer):
             y = y.to(self.device)
 
         with torch.no_grad():
-            # TODO: Evaluate the PyTorch model on one batch of data.
+            # Evaluate the PyTorch model on one batch of data.
             #  - Forward pass
             #  - Calculate number of correct predictions
-            # ====== YOUR CODE: ======
             self.model.train(False)
-            y_hat = self.model(X)                   # same as calling model.forward()
-            loss = self.loss_fn(y_hat, y).item()    # same as calling loss_fn.forward()
+            y_hat = self.model(X)  # same as calling model.forward()
+            loss = self.loss_fn(y_hat, y).item()  # same as calling loss_fn.forward()
             num_correct = torch.sum(torch.argmax(y_hat, axis=1) == y).float().item()
-            # ========================
 
         return BatchResult(loss, num_correct)
