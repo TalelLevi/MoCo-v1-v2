@@ -1,5 +1,6 @@
 import time
 
+import os
 import torch
 import torch.nn as nn
 
@@ -44,7 +45,7 @@ class MoCo_v2(nn.Module):
         self.backbone = backbone
         self.dim = dim  # C
         self.queue_size = queue_size  # K
-        self.batch_size = batch_size  # N
+        self.batch_size = batch_size// len(os.environ["CUDA_VISIBLE_DEVICES"].split(','))  # N
         self.momentum = momentum  # m
         self.temperature = temperature  # t
         self.bias = bias

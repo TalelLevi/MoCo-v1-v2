@@ -5,7 +5,6 @@ import tqdm
 import torch
 from typing import Any, Callable
 from torch.utils.data import DataLoader
-
 from train_result import FitResult, BatchResult, EpochResult
 
 
@@ -28,6 +27,7 @@ class Trainer(abc.ABC):
         :param device: torch.device to run training on (CPU or GPU).
         """
         self.model = model
+        self.model_without_ddp = self.model.module
         self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.device = device
@@ -81,17 +81,19 @@ class Trainer(abc.ABC):
             #    argument.
             # =====================
             res = self.train_epoch(dl_train, **kw)
-            # train_loss.append(sum(res.losses)/len(res.losses))
-            train_loss.extend(res.losses)
+            train_loss.append(sum(res.losses)/len(res.losses))
+            # train_loss.extend(torch.mean(res.losses))
             train_acc.append(res.accuracy)
 
-            if not self.model.pretraining:
+
+            if not self.model.module.pretraining:
                 res = self.test_epoch(dl_test, **kw)
-                # test_loss.append(sum(res.losses)/len(res.losses))
-                test_loss.extend(res.losses)
+                test_loss.append(sum(res.losses)/len(res.losses))
+                # test_loss.extend(res.losses)
                 test_acc.append(res.accuracy)
             else:
-                test_loss.extend(res.losses)
+                # test_loss.extend(res.losses)
+                test_loss.append(sum(res.losses) / len(res.losses))
                 test_acc.append(res.accuracy)
             actual_num_epochs += 1
 
@@ -220,7 +222,7 @@ class TorchTrainer(Trainer):
     def train_batch(self, batch) -> BatchResult:
         X, y = batch
         if self.device:
-            if self.model.pretraining:
+            if self.model.module.pretraining:
                 X = [X[0].to(self.device), X[1].to(self.device)]
             else:
                 X = X.to(self.device)
@@ -233,7 +235,7 @@ class TorchTrainer(Trainer):
         #  - Calculate accuracy
         self.model.train()
         # forward pass
-        if self.model.pretraining:
+        if self.model.module.pretraining:
             q, logits, zeros = self.model(*X)
             loss = self.loss_fn(logits.float(), zeros.long())  # same as calling loss_fn.forward()
         else:
@@ -247,7 +249,7 @@ class TorchTrainer(Trainer):
         # weight update
         self.optimizer.step()
 
-        if not self.model.pretraining:
+        if not self.model.module.pretraining:
             # calc accuracy
             num_correct = torch.sum(torch.argmax(out, axis=1) == y).float().item()
             return BatchResult(loss, num_correct)

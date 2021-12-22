@@ -1,15 +1,13 @@
 import os
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6,7"
 
 import argparse
 from pathlib import Path
-
+import matplotlib.pyplot as plt
 import torch.nn as nn
 from src import utils
 import shutil
-
-
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6,7"
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 from src.MoCo import MoCo_v2
 import time
 import warnings
@@ -27,7 +25,7 @@ def get_args_parser():
     parser.add_argument('--save_log', default=True, type=bool)
     parser.add_argument('--epochs_evaluate_train', default=1, type=int)
     parser.add_argument('--epochs_evaluate_validation', default=1, type=int)
-    parser.add_argument('--num_workers', default=2, type=int)
+    parser.add_argument('--num_workers', default=12, type=int)
     parser.add_argument('--epochs_save', default=None, type=int)
     parser.add_argument('--tqdm_bar', default=True, type=bool)
     parser.add_argument('--preload_data', default=True, type=bool)
@@ -40,7 +38,7 @@ def get_args_parser():
     parser.add_argument('--bs', default=32, type=int)
     parser.add_argument('--temperature', default=0.2, type=float)
     parser.add_argument('--queue_size', default=16384, type=int)
-    parser.add_argument('--epochs', default=600, type=int)
+    parser.add_argument('--epochs', default=2)#600, type=int)
     parser.add_argument('--optimizer_momentum', default=0.9, type=float)
     parser.add_argument('--lr', default=3e-2, type=float)
     parser.add_argument('--min_lr', default=5e-7, type=float)
@@ -134,7 +132,12 @@ def main(args):
         Path(f'./experiments/{exp_name}_moco/checkpoints').mkdir(parents=True, exist_ok=True)
 
     trainer = Trainer(model, criterion, optimizer, device)
-    trainer.fit(train_loader,val_loader,args.epochs,checkpoint_path=f'./experiments/{exp_name}_moco/checkpoints/model.pth')
+    res = trainer.fit(train_loader,val_loader,args.epochs,checkpoint_path=f'./experiments/{exp_name}_moco/checkpoints/model.pth')
+
+    for y_axis, name in zip(res[1:], ['train_loss' , 'train_acc', 'test_loss', 'test_acc']):
+        plt.plot(y_axis, label=name)
+        plt.savefig(f'./plot_{name}.jpg')
+        plt.clf()
 
 
 if __name__ == '__main__':
