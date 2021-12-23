@@ -7,13 +7,11 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import torch.nn as nn
 from src import utils
-import shutil
 from src.MoCo import MoCo_v2
-import time
 import warnings
 warnings.filterwarnings("ignore")
 from src.utils import *
-from train import TorchTrainer as Trainer
+from src.trainers.train import TorchTrainer as Trainer
 import shutil
 
 def get_args_parser():
