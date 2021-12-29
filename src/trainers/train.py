@@ -9,7 +9,7 @@ class TorchTrainer(Trainer):
     def __init__(self, model, loss_fn, optimizer, metrics=None, device=None):  # TODO add base metric
         super().__init__(model, loss_fn, optimizer, metrics, device)
 
-    def train_batch(self, batch) -> BatchResult:
+    def train_batch(self, batch):  # -> BatchResult:
         X, y = batch
         if self.device:
             if self.model.module.pretraining:
@@ -52,7 +52,8 @@ class TorchTrainer(Trainer):
         #     num_correct = torch.sum(torch.argmax(out, axis=1) == y).float().item()
         #     return BatchResult(loss, num_correct)
 
-        return BatchResult(loss.item(), metrics)
+        # return BatchResult(loss.item(), metrics)
+        return loss.item(), metrics
 
     def test_batch(self, batch) -> BatchResult:
         X, y = batch

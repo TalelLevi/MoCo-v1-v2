@@ -1,16 +1,13 @@
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,4,5,6"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6,7"
 
 import argparse
 from pathlib import Path
-
-import torch
+import matplotlib.pyplot as plt
 import torch.nn as nn
 from src import utils
 import shutil
-
-
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6,7"
-os.environ["CUDA_VISIBLE_DEVICES"] = "4"
 from src.MoCo import MoCo_v2
 import time
 import warnings
@@ -28,7 +25,7 @@ def get_args_parser():
     parser.add_argument('--save_log', default=True, type=bool)
     parser.add_argument('--epochs_evaluate_train', default=1, type=int)
     parser.add_argument('--epochs_evaluate_validation', default=1, type=int)
-    parser.add_argument('--num_workers', default=2, type=int)
+    parser.add_argument('--num_workers', default=12, type=int)
     parser.add_argument('--epochs_save', default=None, type=int)
     parser.add_argument('--tqdm_bar', default=True, type=bool)
     parser.add_argument('--preload_data', default=True, type=bool)
@@ -42,7 +39,7 @@ def get_args_parser():
     parser.add_argument('--bs', default=32, type=int)
     parser.add_argument('--temperature', default=0.2, type=float)
     parser.add_argument('--queue_size', default=16384, type=int)
-    parser.add_argument('--epochs', default=600, type=int)
+    parser.add_argument('--epochs', default=200, type=int)
     parser.add_argument('--optimizer_momentum', default=0.9, type=float)
     parser.add_argument('--lr', default=3e-2, type=float)
     parser.add_argument('--min_lr', default=5e-7, type=float)
@@ -83,11 +80,31 @@ def main(args):
         # exp_name = create_name(args)
         exp_name='temp'
 
+
+    # model = MoCo_v2(backbone=args.backbone,
+    #                 dim=args.dim,
+    #                 queue_size=args.queue_size,
+    #                 batch_size=args.bs,
+    #                 momentum=args.model_momentum,
+    #                 temperature=args.temperature,
+    #                 bias=args.bias,
+    #                 pretraining=False,
+    #                 clf_hyperparams={'random_state': 42, 'max_iter': 10000},
+    #                 seed=args.seed,
+    #                 mlp=args.mlp
+    #                 )
+
     model = torch.load(os.path.join(args.load_path,'model.pth'), map_location='cpu')
-    model.pretraining = False
+    model.module.pretraining = False
+
+    # if config.checkpoint_path is not None:
+    #     model_state_dict = torch.load(config.checkpoint_path, map_location='cpu')
+    #     if 'model_state_dict' in model_state_dict.keys():
+    #         model_state_dict = model_state_dict['model_state_dict']
+    #     model_without_ddp.load_state_dict(model_state_dict, strict=True)
 
     if len(os.environ["CUDA_VISIBLE_DEVICES"])>1:
-        model = nn.DataParallel(model)
+        model = nn.DataParallel(model.module)
     model = model.to(device)
 
     train_dataset = utils.Dataset(os.path.join(args.data_path, 'train'), utils.clf_train_transforms,
@@ -131,8 +148,11 @@ def main(args):
         Path(f'./experiments/{exp_name}_clf/checkpoints').mkdir(parents=True, exist_ok=True)
 
     trainer = Trainer(model, criterion, optimizer, device)
-    trainer.fit(train_loader,val_loader,args.epochs,checkpoint_path=f'./experiments/{exp_name}_clf/checkpoints/')
-
+    res = trainer.fit(train_loader,val_loader,args.epochs,checkpoint_path=f'./experiments/{exp_name}_clf/checkpoints/model.pth')
+    for y_axis, name in zip(res[1:], ['train_loss' , 'train_acc', 'test_loss', 'test_acc']):
+        plt.plot(y_axis, label=name)
+        plt.savefig(f'./plot_{name}_clf.jpg')
+        plt.clf()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('MoCo training and evaluation script', parents=[get_args_parser()])

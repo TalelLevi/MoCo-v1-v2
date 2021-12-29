@@ -1,6 +1,57 @@
 import os
 import argparse
 
+# TODO update
+
+def get_args_parser():
+    parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
+    parser.add_argument('--seed', default=None, type=int)
+    parser.add_argument('--data_path', default=os.path.join('data', 'imagenette2'), type=str)
+    parser.add_argument('--models_dir', default='models', type=str)
+    parser.add_argument('--save', default=True, type=bool)
+    parser.add_argument('--save_log', default=True, type=bool)
+    parser.add_argument('--epochs_evaluate_train', default=1, type=int)
+    parser.add_argument('--epochs_evaluate_validation', default=1, type=int)
+    parser.add_argument('--num_workers', default=12, type=int)
+    parser.add_argument('--epochs_save', default=None, type=int)
+    parser.add_argument('--tqdm_bar', default=True, type=bool)
+    parser.add_argument('--preload_data', default=True, type=bool)
+    parser.add_argument('--prints', default='print', type=str)
+
+    # * MoCo
+    parser.add_argument('--load', default=False, type=bool)
+    parser.add_argument('--wd', default=1e-4, type=float)
+    parser.add_argument('--backbone', default='resnext50_32x4d', type=str)
+    parser.add_argument('--bs', default=32, type=int)
+    parser.add_argument('--temperature', default=0.2, type=float)
+    parser.add_argument('--queue_size', default=16384, type=int)
+    parser.add_argument('--epochs', default=600, type=int)
+    parser.add_argument('--optimizer_momentum', default=0.9, type=float)
+    parser.add_argument('--lr', default=3e-2, type=float)
+    parser.add_argument('--min_lr', default=5e-7, type=float)
+    parser.add_argument('--cos', default=True, type=bool)
+    parser.add_argument('--best_policy', default='val_score', type=str)
+    parser.add_argument('--model_momentum', default=0.999, type=float)
+    parser.add_argument('--dim', default=128, type=int)
+    parser.add_argument('--mlp', default=True, type=bool)
+    parser.add_argument('--bias', default=True, type=bool)
+
+    # clf params
+    parser.add_argument('--clf_load', default=-1, type=int)
+    parser.add_argument('--clf_moco_epoch', default='best', type=str)
+    parser.add_argument('--clf_epochs', default=200, type=int)
+    parser.add_argument('--clf_wd ', default= 0.0, type=float)
+    parser.add_argument('--clf_lr', default=3e-2, type=float)
+    parser.add_argument('--clf_cos', default=True, type=bool)
+    parser.add_argument('--clf_best_policy', default= 'val_score', type=str)
+    parser.add_argument('--clf_bs ', default= 32, type=int)
+    parser.add_argument('--clf_optimizer_momentum', default=0.9, type=float)
+    parser.add_argument('--clf_min_lr', default=5e-7, type=float)
+
+    return parser
+
+
+
 
 def parse_cli(*args, **kwargs):
     def is_dir(dirname):

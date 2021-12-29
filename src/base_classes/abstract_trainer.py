@@ -1,6 +1,8 @@
 import os
 import abc
 import sys
+
+import numpy as np
 import tqdm
 import torch
 from typing import Any, Callable
@@ -175,7 +177,7 @@ class Trainer(abc.ABC):
         dataloader, and prints progress along the way.
         """
         losses = []
-        batch_results = []
+        batch_results = np.array([])
         num_correct = 0
         num_samples = len(dl.sampler)
         num_batches = len(dl.batch_sampler)
@@ -202,11 +204,13 @@ class Trainer(abc.ABC):
                 pbar.update()
 
                 losses.append(batch_res.loss)
-                batch_results.append(batch_res)
+                batch_results = np.concatenate((batch_results, np.array(batch_res)))
+                # batch_results.concatenate(batch_res)
                 # num_correct += batch_res.num_correct
 
             avg_loss = sum(losses) / num_batches
-            accuracy = 100.0 * num_correct / num_samples
+            # accuracy = 100.0 * num_correct / num_samples    # TODO update to handle N number of metrics
+            accuracy = sum(batch_results[: 0])/len(batch_res)
             pbar.set_description(
                 f"{pbar_name} "
                 f"(Avg. Loss {avg_loss:.3f}, "
