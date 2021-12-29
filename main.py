@@ -17,6 +17,7 @@ from src.trainers.train import TorchTrainer as Trainer
 from src.utils.parser import get_args_parser
 from src.models.MoCo import MoCo_v2
 from src.loss_functions.MoCo_loss import ContrastiveLoss
+from src.metrics.accuracy_metric import accuracy_metric
 
 def main(args):
     if args.seed is not None:
@@ -75,7 +76,7 @@ def main(args):
     #                                                           eta_min=args.min_lr) if args.cos else None
 
     criterion = ContrastiveLoss(pretraining=True)
-
+    metrics = [accuracy_metric()]
     optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
                                 lr=args.lr,
                                 momentum=args.optimizer_momentum,
@@ -87,7 +88,7 @@ def main(args):
 
         Path(f'./experiments/{exp_name}_moco/checkpoints').mkdir(parents=True, exist_ok=True)
 
-    trainer = Trainer(model, criterion, optimizer, device)
+    trainer = Trainer(model, criterion, optimizer, device, metrics=metrics)
     res = trainer.fit(train_loader,val_loader,args.epochs,checkpoint_path=f'./experiments/{exp_name}_moco/checkpoints/model.pth')
 
     for y_axis, name in zip(res[1:], ['train_loss' , 'train_acc', 'test_loss', 'test_acc']):  # TODO change to plotter
@@ -152,7 +153,7 @@ def main(args):
     #                                                           eta_min=args.min_lr) if args.cos else None
 
     criterion = ContrastiveLoss(pretraining=False)
-
+    metrics = [accuracy_metric()]
     optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
                                 lr=args.clf_lr,
                                 momentum=args.clf_optimizer_momentum,
@@ -164,7 +165,7 @@ def main(args):
 
         Path(f'./experiments/{exp_name}_clf/checkpoints').mkdir(parents=True, exist_ok=True)
 
-    trainer = Trainer(model, criterion, optimizer, device)
+    trainer = Trainer(model, criterion, optimizer, device, metrics=metrics)
     res = trainer.fit(train_loader, val_loader, args.epochs,
                       checkpoint_path=f'./experiments/{exp_name}_clf/checkpoints/model.pth')
     for y_axis, name in zip(res[1:], ['train_loss', 'train_acc', 'test_loss', 'test_acc']): # TODO change to plotter
