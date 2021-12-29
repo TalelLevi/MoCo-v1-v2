@@ -13,7 +13,7 @@ class Dummy(nn.Module):
         return x
 
 
-class MoCo_v2(Model):
+class MoCo_v2(torch.nn.Module):
     """
     an implementation of MoCo v1 and MoCo v2
 

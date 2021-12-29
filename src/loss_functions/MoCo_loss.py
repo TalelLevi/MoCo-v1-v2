@@ -11,7 +11,7 @@ class ContrastiveLoss(LossFunction):
     def __call__(self, model_out, y, **kwargs):
         if self.pretraining:
             q, logits, zeros = model_out
-            loss = torch.nn.functional.cross_entropy(logits.float(), zeros.float())
+            loss = torch.nn.functional.cross_entropy(logits, zeros)
 
         else:
             logits = model_out

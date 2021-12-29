@@ -8,16 +8,18 @@ import warnings
 from pathlib import Path
 import matplotlib.pyplot as plt
 import torch.nn as nn
-from src import utils
-
+import torch
 
 warnings.filterwarnings("ignore")
 from src.utils import *
 from src.trainers.train import TorchTrainer as Trainer
-from src.utils.parser import get_args_parser
+from src.utils_levi.parser import get_args_parser
+# from src import utils
+import random
 from src.models.MoCo import MoCo_v2
 from src.loss_functions.MoCo_loss import ContrastiveLoss
 from src.metrics.accuracy_metric import accuracy_metric
+from src.metrics.none_metric import none_metric
 
 def main(args):
     if args.seed is not None:
@@ -48,14 +50,13 @@ def main(args):
                     )
     if len(os.environ["CUDA_VISIBLE_DEVICES"])>1:
         model = nn.DataParallel(model)
-        print("hey")
     model = model.to(device)
 
-    train_dataset = utils.Dataset(os.path.join(args.data_path, 'train'), moco_v2_transforms,
+    train_dataset = Dataset(os.path.join(args.data_path, 'train'), moco_v2_transforms,
                                   preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
     # train_eval_dataset = utils.Dataset(os.path.join(args.data_path, 'train'), TwoCropsTransform(clf_train_transforms),
     #                                    preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
-    val_dataset = utils.Dataset(os.path.join(args.data_path, 'val'), TwoCropsTransform(clf_val_transforms),
+    val_dataset = Dataset(os.path.join(args.data_path, 'val'), TwoCropsTransform(clf_val_transforms),
                                 preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
 
     train_loader = torch.utils.data.DataLoader(train_dataset,
@@ -76,7 +77,7 @@ def main(args):
     #                                                           eta_min=args.min_lr) if args.cos else None
 
     criterion = ContrastiveLoss(pretraining=True)
-    metrics = [accuracy_metric()]
+    metrics = [none_metric()]
     optimizer = torch.optim.SGD([p for p in model.parameters() if p.requires_grad],
                                 lr=args.lr,
                                 momentum=args.optimizer_momentum,
@@ -88,7 +89,7 @@ def main(args):
 
         Path(f'./experiments/{exp_name}_moco/checkpoints').mkdir(parents=True, exist_ok=True)
 
-    trainer = Trainer(model, criterion, optimizer, device, metrics=metrics)
+    trainer = Trainer(model, criterion, optimizer, metrics=metrics, device=device)
     res = trainer.fit(train_loader,val_loader,args.epochs,checkpoint_path=f'./experiments/{exp_name}_moco/checkpoints/model.pth')
 
     for y_axis, name in zip(res[1:], ['train_loss' , 'train_acc', 'test_loss', 'test_acc']):  # TODO change to plotter
@@ -125,11 +126,11 @@ def main(args):
     model = model.to(device)
 
 
-    train_dataset = utils.Dataset(os.path.join(args.data_path, 'train'), utils.clf_train_transforms,
+    train_dataset = Dataset(os.path.join(args.data_path, 'train'), utils.clf_train_transforms,
                                   preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
     # train_eval_dataset = utils.Dataset(os.path.join(args.data_path, 'train'), TwoCropsTransform(clf_train_transforms),
     #                                    preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
-    val_dataset = utils.Dataset(os.path.join(args.data_path, 'val'), utils.clf_val_transforms,
+    val_dataset = Dataset(os.path.join(args.data_path, 'val'), clf_val_transforms,
                                 preload_data=args.preload_data, tqdm_bar=args.tqdm_bar)
 
     train_loader = torch.utils.data.DataLoader(train_dataset,

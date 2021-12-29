@@ -45,7 +45,7 @@ class TorchTrainer(Trainer):
         self.optimizer.step()
 
         # calculate the metric
-        metrics = [metric(model_out) for metric in self.metric]
+        metrics = [metric(model_out, y) for metric in self.metric]
 
         # if not self.model.module.pretraining:
         #     # calc accuracy

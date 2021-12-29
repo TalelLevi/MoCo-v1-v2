@@ -10,7 +10,7 @@ class LossFunction(abc.ABC):
         """
         initiate the loss function class with needed parameters
         """
-        raise NotImplementedError()
+        pass
 
 
     @abc.abstractmethod

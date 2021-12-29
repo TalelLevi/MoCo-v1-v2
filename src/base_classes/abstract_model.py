@@ -10,7 +10,8 @@ class Model(torch.nn.Module):
         """
         initiate the loss function class with needed parameters
         """
-        raise NotImplementedError()
+        super().__init__()
+        pass
 
 
     @abc.abstractmethod

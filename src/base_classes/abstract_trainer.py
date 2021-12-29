@@ -200,10 +200,10 @@ class Trainer(abc.ABC):
                 # data = next(dl_iter)
                 batch_res = forward_fn(data)
 
-                pbar.set_description(f"{pbar_name} ({batch_res.loss:.3f})")
+                pbar.set_description(f"{pbar_name} ({batch_res[0]:.3f})")
                 pbar.update()
 
-                losses.append(batch_res.loss)
+                losses.append(batch_res[0])
                 batch_results = np.concatenate((batch_results, np.array(batch_res)))
                 # batch_results.concatenate(batch_res)
                 # num_correct += batch_res.num_correct
