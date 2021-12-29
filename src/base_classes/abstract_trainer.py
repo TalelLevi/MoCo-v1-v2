@@ -18,7 +18,7 @@ class Trainer(abc.ABC):
     - Single batch (train_batch/test_batch)
     """
 
-    def __init__(self, model, loss_fn, optimizer, device=None):
+    def __init__(self, model, loss_fn, optimizer, metrics=None, device=None):
         """
         Initialize the trainer.
         :param model: Instance of the model to train.
@@ -30,6 +30,7 @@ class Trainer(abc.ABC):
         self.model_without_ddp = self.model.module
         self.loss_fn = loss_fn
         self.optimizer = optimizer
+        self.metric = metrics
         self.device = device
 
         if self.device:
@@ -174,6 +175,7 @@ class Trainer(abc.ABC):
         dataloader, and prints progress along the way.
         """
         losses = []
+        batch_results = []
         num_correct = 0
         num_samples = len(dl.sampler)
         num_batches = len(dl.batch_sampler)
@@ -190,16 +192,18 @@ class Trainer(abc.ABC):
 
         pbar_name = forward_fn.__name__
         with tqdm.tqdm(desc=pbar_name, total=num_batches, file=pbar_file) as pbar:
-            dl_iter = iter(dl)
-            for batch_idx in range(num_batches):
-                data = next(dl_iter)
+            # dl_iter = iter(dl)
+            # for batch_idx in range(num_batches):
+            for batch_idx, data in enumerate(dl):
+                # data = next(dl_iter)
                 batch_res = forward_fn(data)
 
                 pbar.set_description(f"{pbar_name} ({batch_res.loss:.3f})")
                 pbar.update()
 
                 losses.append(batch_res.loss)
-                num_correct += batch_res.num_correct
+                batch_results.append(batch_res)
+                # num_correct += batch_res.num_correct
 
             avg_loss = sum(losses) / num_batches
             accuracy = 100.0 * num_correct / num_samples

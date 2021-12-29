@@ -6,8 +6,8 @@ from src.base_classes.abstract_trainer import Trainer
 
 # ============== Inherit train Class ==============
 class TorchTrainer(Trainer):
-    def __init__(self, model, loss_fn, optimizer, device=None):
-        super().__init__(model, loss_fn, optimizer, device)
+    def __init__(self, model, loss_fn, optimizer, metrics=None, device=None):  # TODO add base metric
+        super().__init__(model, loss_fn, optimizer, metrics, device)
 
     def train_batch(self, batch) -> BatchResult:
         X, y = batch
@@ -44,12 +44,15 @@ class TorchTrainer(Trainer):
         # weight update
         self.optimizer.step()
 
-        if not self.model.module.pretraining:
-            # calc accuracy
-            num_correct = torch.sum(torch.argmax(out, axis=1) == y).float().item()
-            return BatchResult(loss, num_correct)
-        loss = loss.item()
-        return BatchResult(loss, 0)
+        # calculate the metric
+        metrics = [metric(model_out) for metric in self.metric]
+
+        # if not self.model.module.pretraining:
+        #     # calc accuracy
+        #     num_correct = torch.sum(torch.argmax(out, axis=1) == y).float().item()
+        #     return BatchResult(loss, num_correct)
+
+        return BatchResult(loss.item(), metrics)
 
     def test_batch(self, batch) -> BatchResult:
         X, y = batch

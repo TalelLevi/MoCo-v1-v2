@@ -7,8 +7,6 @@ import torch.nn as nn
 import torchvision
 
 
-
-
 class Dummy(nn.Module):
     def __init__(self):
         super().__init__()
