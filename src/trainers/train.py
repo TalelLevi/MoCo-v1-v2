@@ -55,7 +55,7 @@ class TorchTrainer(Trainer):
         # return BatchResult(loss.item(), metrics)
         return loss.item(), metrics
 
-    def test_batch(self, batch) -> BatchResult:
+    def test_batch(self, batch):# -> BatchResult:
         X, y = batch
         if self.device:
             X = X.to(self.device)
@@ -70,4 +70,8 @@ class TorchTrainer(Trainer):
             loss = self.loss_fn(y_hat, y).item()  # same as calling loss_fn.forward()
             num_correct = torch.sum(torch.argmax(y_hat, axis=1) == y).float().item()
 
-        return BatchResult(loss, num_correct)
+        # calculate the metric
+        metrics = [metric(y_hat, y) for metric in self.metric]
+        # return BatchResult(loss, num_correct)
+
+        return loss, metrics

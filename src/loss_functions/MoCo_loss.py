@@ -15,6 +15,6 @@ class ContrastiveLoss(LossFunction):
 
         else:
             logits = model_out
-            loss = torch.nn.functional.cross_entropy(logits.float(), y.float())
+            loss = torch.nn.functional.cross_entropy(logits, y)
 
         return loss

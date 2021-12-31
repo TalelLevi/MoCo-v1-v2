@@ -204,13 +204,13 @@ class Trainer(abc.ABC):
                 pbar.update()
 
                 losses.append(batch_res[0])
-                batch_results = np.concatenate((batch_results, np.array(batch_res)))
+                batch_results = np.concatenate((batch_results, np.array(batch_res[1])))
                 # batch_results.concatenate(batch_res)
                 # num_correct += batch_res.num_correct
 
             avg_loss = sum(losses) / num_batches
             # accuracy = 100.0 * num_correct / num_samples    # TODO update to handle N number of metrics
-            accuracy = sum(batch_results[: 0])/len(batch_res)
+            accuracy = sum(batch_results)/len(batch_results)
             pbar.set_description(
                 f"{pbar_name} "
                 f"(Avg. Loss {avg_loss:.3f}, "

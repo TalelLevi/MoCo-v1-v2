@@ -105,15 +105,15 @@ class MoCo_v2(torch.nn.Module):
 
         # init new fc encoder layer
         self.q_encoder.fc = nn.Linear(self.q_fc[0].weight.shape[1], self.num_classes, bias=self.bias)
-        self.q_encoder.fc.weight.data = torch.FloatTensor(self.clf.coef_)
-        self.q_encoder.fc.bias.data = torch.FloatTensor(self.clf.intercept_)
+        # self.q_encoder.fc.weight.data = torch.FloatTensor(self.clf.coef_)
+        # self.q_encoder.fc.bias.data = torch.FloatTensor(self.clf.intercept_)
 
         # del sklearn classifier and old mlp/fc layer
         del self.q_fc
-        try:
-            del self.clf
-        except:
-            pass
+        # try:
+        #     del self.clf
+        # except:
+        #     pass
 
         # make sure new fc layer grad enables
         for p in self.q_encoder.fc.parameters():

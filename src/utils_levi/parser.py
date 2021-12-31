@@ -12,7 +12,7 @@ def get_args_parser():
     parser.add_argument('--save_log', default=True, type=bool)
     parser.add_argument('--epochs_evaluate_train', default=1, type=int)
     parser.add_argument('--epochs_evaluate_validation', default=1, type=int)
-    parser.add_argument('--num_workers', default=12, type=int)
+    parser.add_argument('--num_workers', default=2, type=int)
     parser.add_argument('--epochs_save', default=None, type=int)
     parser.add_argument('--tqdm_bar', default=True, type=bool)
     parser.add_argument('--preload_data', default=True, type=bool)
@@ -37,14 +37,15 @@ def get_args_parser():
     parser.add_argument('--bias', default=True, type=bool)
 
     # clf params
+    parser.add_argument('--load_path', default='./experiments/temp_moco/checkpoints/', type=str)
     parser.add_argument('--clf_load', default=-1, type=int)
     parser.add_argument('--clf_moco_epoch', default='best', type=str)
     parser.add_argument('--clf_epochs', default=200, type=int)
-    parser.add_argument('--clf_wd ', default= 0.0, type=float)
+    parser.add_argument('--clf_wd', default= 0.0, type=float)
     parser.add_argument('--clf_lr', default=3e-2, type=float)
     parser.add_argument('--clf_cos', default=True, type=bool)
-    parser.add_argument('--clf_best_policy', default= 'val_score', type=str)
-    parser.add_argument('--clf_bs ', default= 32, type=int)
+    parser.add_argument('--cFlf_best_policy', default= 'val_score', type=str)
+    parser.add_argument('--clf_bs', default= 32, type=int)
     parser.add_argument('--clf_optimizer_momentum', default=0.9, type=float)
     parser.add_argument('--clf_min_lr', default=5e-7, type=float)
 
@@ -134,7 +135,7 @@ def parse_cli(*args, **kwargs):
     )
     parser.add_argument(
         '--num_workers',
-        default=12,
+        default=2,
         type=int
     )
     parser.add_argument(
@@ -191,6 +192,7 @@ def parse_cli(*args, **kwargs):
     parser.add_argument('--clf_epochs', default=200, type=int)
     parser.add_argument('--clf_best_policy', default='val_score', type=str)
     parser.add_argument('--clf_optimizer_momentum', default=0.9, type=float)
+    parser.add_argument('--clf_wd', default=0.0, type=float)
 
 
     args = parser.parse_args()
